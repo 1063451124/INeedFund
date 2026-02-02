@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>盘中涨跌看板</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+      body {
+        margin: 24px;
+        background: #0d1117;
+        color: #e6edf3;
+      }
+      h1 {
+        font-size: 22px;
+        margin-bottom: 12px;
+      }
+      .toolbar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      button {
+        background: #238636;
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: wait;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #161b22;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid #30363d;
+        font-size: 14px;
+      }
+      th {
+        background: #21262d;
+      }
+      .muted {
+        color: #8b949e;
+      }
+      .positive {
+        color: #3fb950;
+      }
+      .negative {
+        color: #f85149;
+      }
+      .footnote {
+        margin-top: 14px;
+        font-size: 12px;
+        color: #8b949e;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>盘中涨跌看板</h1>
+    <div class="toolbar">
+      <button id="refresh-btn">刷新</button>
+      <span id="status" class="muted">等待刷新</span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>产品</th>
+          <th>盘中涨跌%</th>
+          <th>来源</th>
+          <th>时间</th>
+          <th>状态</th>
+          <th>链接</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <p class="footnote">
+      免责声明：盘中估值/预估涨跌不等同于最终净值，仅供参考。
+    </p>
+
+    <script>
+      const statusEl = document.getElementById("status");
+      const rowsEl = document.getElementById("rows");
+      const refreshBtn = document.getElementById("refresh-btn");
+
+      const formatPct = (value) => {
+        if (value === null || value === undefined) {
+          return "--";
+        }
+        const sign = value > 0 ? "+" : "";
+        return `${sign}${value.toFixed(2)}%`;
+      };
+
+      const pctClass = (value) => {
+        if (value === null || value === undefined) {
+          return "muted";
+        }
+        if (value > 0) return "positive";
+        if (value < 0) return "negative";
+        return "muted";
+      };
+
+      const renderRows = (items) => {
+        rowsEl.innerHTML = "";
+        items.forEach((item) => {
+          const tr = document.createElement("tr");
+
+          const nameCell = document.createElement("td");
+          nameCell.textContent = `${item.name} (${item.code})`;
+
+          const pctCell = document.createElement("td");
+          pctCell.textContent = formatPct(item.intraday_pct);
+          pctCell.className = pctClass(item.intraday_pct);
+
+          const providerCell = document.createElement("td");
+          providerCell.textContent = item.source_provider;
+
+          const timeCell = document.createElement("td");
+          timeCell.textContent = item.asof_time;
+
+          const statusCell = document.createElement("td");
+          statusCell.textContent = item.status === "ok" ? "ok" : `${item.status}: ${item.error || ""}`;
+          statusCell.className = item.status === "ok" ? "positive" : "negative";
+
+          const urlCell = document.createElement("td");
+          const link = document.createElement("a");
+          link.href = item.source_url;
+          link.textContent = "source";
+          link.className = "muted";
+          link.target = "_blank";
+          urlCell.appendChild(link);
+
+          tr.appendChild(nameCell);
+          tr.appendChild(pctCell);
+          tr.appendChild(providerCell);
+          tr.appendChild(timeCell);
+          tr.appendChild(statusCell);
+          tr.appendChild(urlCell);
+
+          rowsEl.appendChild(tr);
+        });
+      };
+
+      const refresh = async () => {
+        refreshBtn.disabled = true;
+        statusEl.textContent = "刷新中...";
+        try {
+          const data = await window.pywebview.api.refresh();
+          renderRows(data);
+          statusEl.textContent = `更新完成：${new Date().toLocaleTimeString()}`;
+        } catch (error) {
+          statusEl.textContent = `刷新失败：${error}`;
+        } finally {
+          refreshBtn.disabled = false;
+        }
+      };
+
+      refreshBtn.addEventListener("click", refresh);
+      refresh();
+    </script>
+  </body>
+</html>

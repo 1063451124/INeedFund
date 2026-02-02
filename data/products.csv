@@ -1,0 +1,3 @@
+code,name,kind,mode,ref,enabled
+519674,银河创新成长混合A,otc,fund_intraday,"providers=fundgz,aniu;stale_rule=auto",1
+013275,富国中证煤炭指数(LOF)C,otc,fund_intraday,"providers=fundgz,aniu;stale_rule=auto",1
